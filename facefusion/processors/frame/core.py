@@ -1,5 +1,4 @@
 import os
-import sys
 import importlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
@@ -8,6 +7,7 @@ from typing import Any, List
 from tqdm import tqdm
 
 import facefusion.globals
+from facefusion.exit_helper import hard_exit
 from facefusion.typing import ProcessFrames, QueuePayload
 from facefusion.execution import encode_execution_providers
 from facefusion import logger, wording
@@ -42,10 +42,10 @@ def load_frame_processor_module(frame_processor : str) -> Any:
 	except ModuleNotFoundError as exception:
 		logger.error(wording.get('frame_processor_not_loaded').format(frame_processor = frame_processor), __name__.upper())
 		logger.debug(exception.msg, __name__.upper())
-		sys.exit(1)
+		hard_exit(1)
 	except NotImplementedError:
 		logger.error(wording.get('frame_processor_not_implemented').format(frame_processor = frame_processor), __name__.upper())
-		sys.exit(1)
+		hard_exit(1)
 	return frame_processor_module
 
 
@@ -106,10 +106,10 @@ def create_queue_payloads(temp_frame_paths : List[str]) -> List[QueuePayload]:
 	queue_payloads = []
 	temp_frame_paths = sorted(temp_frame_paths, key = os.path.basename)
 
-	for frame_number, frame_path in enumerate(temp_frame_paths):
+	for index, frame_path in enumerate(temp_frame_paths):
 		frame_payload : QueuePayload =\
 		{
-			'frame_number': frame_number,
+			'frame_number': index,
 			'frame_path': frame_path
 		}
 		queue_payloads.append(frame_payload)

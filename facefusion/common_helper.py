@@ -1,5 +1,7 @@
-from typing import List, Any
+from typing import List, Any, Optional
+from datetime import datetime
 import platform
+import sys
 
 
 def create_metavar(ranges : List[Any]) -> str:
@@ -26,6 +28,10 @@ def create_float_range(start : float, end : float, step : float) -> List[float]:
 	return float_range
 
 
+def get_current_datetime() -> str:
+	return datetime.now().astimezone().isoformat()
+
+
 def is_linux() -> bool:
 	return to_lower_case(platform.system()) == 'linux'
 
@@ -40,6 +46,14 @@ def is_windows() -> bool:
 
 def to_lower_case(__string__ : Any) -> str:
 	return str(__string__).lower()
+
+
+def get_argument_value(argument : str) -> Optional[str]:
+	try:
+		index = sys.argv.index(argument) + 1
+		return sys.argv[index]
+	except (ValueError, IndexError):
+		return None
 
 
 def get_first(__list__ : Any) -> Any:

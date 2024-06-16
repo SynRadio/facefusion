@@ -13,18 +13,22 @@ from argparse import ArgumentParser, HelpFormatter
 
 import facefusion.choices
 import facefusion.globals
+from facefusion.typing import ErrorCode, Args
+from facefusion import face_analyser, face_masker, content_analyser, config, job_manager, job_runner, job_store, process_manager, metadata, logger, voice_extractor, wording
+from facefusion.program_helper import validate_args, reduce_args, update_args
 from facefusion.face_analyser import get_one_face, get_average_face
 from facefusion.face_store import get_reference_faces, append_reference_face
-from facefusion import face_analyser, face_masker, content_analyser, config, process_manager, metadata, logger, wording, voice_extractor
 from facefusion.content_analyser import analyse_image, analyse_video
 from facefusion.processors.frame.core import get_frame_processors_modules, load_frame_processor_module
-from facefusion.common_helper import create_metavar, get_first
+from facefusion.exit_helper import hard_exit, conditional_exit, graceful_exit
+from facefusion.common_helper import create_metavar, get_first, get_argument_value
 from facefusion.execution import encode_execution_providers, decode_execution_providers
-from facefusion.normalizer import normalize_output_path, normalize_padding, normalize_fps
+from facefusion.normalizer import normalize_padding, normalize_fps
 from facefusion.memory import limit_system_memory
 from facefusion.statistics import conditional_log_statistics
 from facefusion.download import conditional_download
-from facefusion.filesystem import get_temp_frame_paths, get_temp_file_path, create_temp, move_temp, clear_temp, is_image, is_video, filter_audio_paths, resolve_relative_path, list_directory
+from facefusion.filesystem import is_image, is_video, filter_audio_paths, resolve_relative_path, list_directory
+from facefusion.temp_helper import get_temp_frame_paths, get_temp_file_path, create_temp, move_temp, clear_temp
 from facefusion.ffmpeg import extract_frames, merge_video, copy_image, finalize_image, restore_audio, replace_audio
 from facefusion.vision import read_image, read_static_images, detect_image_resolution, restrict_video_fps, create_image_resolutions, get_video_frame, detect_video_resolution, detect_video_fps, restrict_video_resolution, restrict_image_resolution, create_video_resolutions, pack_resolution, unpack_resolution
 
@@ -33,21 +37,30 @@ warnings.filterwarnings('ignore', category = UserWarning, module = 'gradio')
 
 
 def cli() -> None:
-	signal.signal(signal.SIGINT, lambda signal_number, frame: destroy())
+	signal.signal(signal.SIGINT, lambda signal_number, frame: graceful_exit(0))
+	program = create_program()
+	if validate_args(program):
+		run(program)
+
+
+def create_program() -> ArgumentParser:
 	program = ArgumentParser(formatter_class = lambda prog: HelpFormatter(prog, max_help_position = 200), add_help = False)
 	# general
-	program.add_argument('-c', '--config', help = wording.get('help.config'), dest = 'config_path', default = 'facefusion.ini')
-	apply_config(program)
-	program.add_argument('-s', '--source', help = wording.get('help.source'), action = 'append', dest = 'source_paths', default = config.get_str_list('general.source_paths'))
-	program.add_argument('-t', '--target', help = wording.get('help.target'), dest = 'target_path', default = config.get_str_value('general.target_path'))
-	program.add_argument('-o', '--output', help = wording.get('help.output'), dest = 'output_path', default = config.get_str_value('general.output_path'))
+	program.add_argument('-c', '--config-path', help = wording.get('help.config'), dest = 'config_path', default = 'facefusion.ini')
+	apply_config_path(program)
+	program.add_argument('-s', '--source-paths', help = wording.get('help.source_paths'), action = 'append', dest = 'source_paths', default = config.get_str_list('general.source_paths'))
+	program.add_argument('-t', '--target-path', help = wording.get('help.target_path'), dest = 'target_path', default = config.get_str_value('general.target_path'))
+	program.add_argument('-o', '--output-path', help = wording.get('help.output_path'), dest = 'output_path', default = config.get_str_value('general.output_path'))
+	program.add_argument('-j', '--jobs-path', help = wording.get('help.jobs_path'), default = config.get_str_value('misc.log_level', '.jobs'))
 	program.add_argument('-v', '--version', version = metadata.get('name') + ' ' + metadata.get('version'), action = 'version')
+	job_store.register_step_args([ 'source_paths', 'target_path', 'output_path' ])
 	# misc
 	group_misc = program.add_argument_group('misc')
 	group_misc.add_argument('--force-download', help = wording.get('help.force_download'), action = 'store_true', default = config.get_bool_value('misc.force_download'))
 	group_misc.add_argument('--skip-download', help = wording.get('help.skip_download'), action = 'store_true', default = config.get_bool_value('misc.skip_download'))
 	group_misc.add_argument('--headless', help = wording.get('help.headless'), action = 'store_true', default = config.get_bool_value('misc.headless'))
 	group_misc.add_argument('--log-level', help = wording.get('help.log_level'), default = config.get_str_value('misc.log_level', 'info'), choices = logger.get_log_levels())
+	job_store.register_job_args([ 'log_level' ])
 	# execution
 	execution_providers = encode_execution_providers(onnxruntime.get_available_providers())
 	group_execution = program.add_argument_group('execution')
@@ -55,37 +68,45 @@ def cli() -> None:
 	group_execution.add_argument('--execution-providers', help = wording.get('help.execution_providers').format(choices = ', '.join(execution_providers)), default = config.get_str_list('execution.execution_providers', 'cpu'), choices = execution_providers, nargs = '+', metavar = 'EXECUTION_PROVIDERS')
 	group_execution.add_argument('--execution-thread-count', help = wording.get('help.execution_thread_count'), type = int, default = config.get_int_value('execution.execution_thread_count', '4'), choices = facefusion.choices.execution_thread_count_range, metavar = create_metavar(facefusion.choices.execution_thread_count_range))
 	group_execution.add_argument('--execution-queue-count', help = wording.get('help.execution_queue_count'), type = int, default = config.get_int_value('execution.execution_queue_count', '1'), choices = facefusion.choices.execution_queue_count_range, metavar = create_metavar(facefusion.choices.execution_queue_count_range))
+	job_store.register_job_args([ 'execution_device_id', 'execution_providers', 'execution_thread-count', 'execution_queue_count' ])
 	# memory
 	group_memory = program.add_argument_group('memory')
 	group_memory.add_argument('--video-memory-strategy', help = wording.get('help.video_memory_strategy'), default = config.get_str_value('memory.video_memory_strategy', 'strict'), choices = facefusion.choices.video_memory_strategies)
 	group_memory.add_argument('--system-memory-limit', help = wording.get('help.system_memory_limit'), type = int, default = config.get_int_value('memory.system_memory_limit', '0'), choices = facefusion.choices.system_memory_limit_range, metavar = create_metavar(facefusion.choices.system_memory_limit_range))
+	job_store.register_job_args([ 'video_memory_strategy', 'system_memory_limit' ])
 	# face analyser
+	face_detector_model = get_argument_value('--face-detector-model') or 'yoloface'
+	face_detector_size_choices = facefusion.choices.face_detector_set.get(face_detector_model) #type:ignore[call-overload]
 	group_face_analyser = program.add_argument_group('face analyser')
 	group_face_analyser.add_argument('--face-analyser-order', help = wording.get('help.face_analyser_order'), default = config.get_str_value('face_analyser.face_analyser_order', 'left-right'), choices = facefusion.choices.face_analyser_orders)
 	group_face_analyser.add_argument('--face-analyser-age', help = wording.get('help.face_analyser_age'), default = config.get_str_value('face_analyser.face_analyser_age'), choices = facefusion.choices.face_analyser_ages)
 	group_face_analyser.add_argument('--face-analyser-gender', help = wording.get('help.face_analyser_gender'), default = config.get_str_value('face_analyser.face_analyser_gender'), choices = facefusion.choices.face_analyser_genders)
 	group_face_analyser.add_argument('--face-detector-model', help = wording.get('help.face_detector_model'), default = config.get_str_value('face_analyser.face_detector_model', 'yoloface'), choices = facefusion.choices.face_detector_set.keys())
-	group_face_analyser.add_argument('--face-detector-size', help = wording.get('help.face_detector_size'), default = config.get_str_value('face_analyser.face_detector_size', '640x640'))
+	group_face_analyser.add_argument('--face-detector-size', help = wording.get('help.face_detector_size'), default = config.get_str_value('face_analyser.face_detector_size', '640x640'), choices = face_detector_size_choices)
 	group_face_analyser.add_argument('--face-detector-score', help = wording.get('help.face_detector_score'), type = float, default = config.get_float_value('face_analyser.face_detector_score', '0.5'), choices = facefusion.choices.face_detector_score_range, metavar = create_metavar(facefusion.choices.face_detector_score_range))
 	group_face_analyser.add_argument('--face-landmarker-score', help = wording.get('help.face_landmarker_score'), type = float, default = config.get_float_value('face_analyser.face_landmarker_score', '0.5'), choices = facefusion.choices.face_landmarker_score_range, metavar = create_metavar(facefusion.choices.face_landmarker_score_range))
+	job_store.register_step_args([ 'face_analyser_order', 'face_analyser_age', 'face_analyser_gender', 'face_detector_model', 'face_detector_size', 'face_detector_score', 'face_landmarker_score' ])
 	# face selector
 	group_face_selector = program.add_argument_group('face selector')
 	group_face_selector.add_argument('--face-selector-mode', help = wording.get('help.face_selector_mode'), default = config.get_str_value('face_selector.face_selector_mode', 'reference'), choices = facefusion.choices.face_selector_modes)
 	group_face_selector.add_argument('--reference-face-position', help = wording.get('help.reference_face_position'), type = int, default = config.get_int_value('face_selector.reference_face_position', '0'))
 	group_face_selector.add_argument('--reference-face-distance', help = wording.get('help.reference_face_distance'), type = float, default = config.get_float_value('face_selector.reference_face_distance', '0.6'), choices = facefusion.choices.reference_face_distance_range, metavar = create_metavar(facefusion.choices.reference_face_distance_range))
 	group_face_selector.add_argument('--reference-frame-number', help = wording.get('help.reference_frame_number'), type = int, default = config.get_int_value('face_selector.reference_frame_number', '0'))
+	job_store.register_step_args([ 'face_selector_mode', 'reference_face_position', 'reference_face_distance', 'reference_frame_number' ])
 	# face mask
 	group_face_mask = program.add_argument_group('face mask')
 	group_face_mask.add_argument('--face-mask-types', help = wording.get('help.face_mask_types').format(choices = ', '.join(facefusion.choices.face_mask_types)), default = config.get_str_list('face_mask.face_mask_types', 'box'), choices = facefusion.choices.face_mask_types, nargs = '+', metavar = 'FACE_MASK_TYPES')
 	group_face_mask.add_argument('--face-mask-blur', help = wording.get('help.face_mask_blur'), type = float, default = config.get_float_value('face_mask.face_mask_blur', '0.3'), choices = facefusion.choices.face_mask_blur_range, metavar = create_metavar(facefusion.choices.face_mask_blur_range))
 	group_face_mask.add_argument('--face-mask-padding', help = wording.get('help.face_mask_padding'), type = int, default = config.get_int_list('face_mask.face_mask_padding', '0 0 0 0'), nargs = '+')
 	group_face_mask.add_argument('--face-mask-regions', help = wording.get('help.face_mask_regions').format(choices = ', '.join(facefusion.choices.face_mask_regions)), default = config.get_str_list('face_mask.face_mask_regions', ' '.join(facefusion.choices.face_mask_regions)), choices = facefusion.choices.face_mask_regions, nargs = '+', metavar = 'FACE_MASK_REGIONS')
+	job_store.register_step_args([ 'face_mask_types', 'face_mask_blur', 'face_mask_padding', 'face_mask_regions' ])
 	# frame extraction
 	group_frame_extraction = program.add_argument_group('frame extraction')
 	group_frame_extraction.add_argument('--trim-frame-start', help = wording.get('help.trim_frame_start'), type = int, default = facefusion.config.get_int_value('frame_extraction.trim_frame_start'))
 	group_frame_extraction.add_argument('--trim-frame-end',	help = wording.get('help.trim_frame_end'), type = int, default = facefusion.config.get_int_value('frame_extraction.trim_frame_end'))
 	group_frame_extraction.add_argument('--temp-frame-format', help = wording.get('help.temp_frame_format'), default = config.get_str_value('frame_extraction.temp_frame_format', 'png'), choices = facefusion.choices.temp_frame_formats)
 	group_frame_extraction.add_argument('--keep-temp', help = wording.get('help.keep_temp'), action = 'store_true',	default = config.get_bool_value('frame_extraction.keep_temp'))
+	job_store.register_step_args([ 'trim_frame_start', 'trim_frame_end', 'temp_frame_format', 'keep_temp' ])
 	# output creation
 	group_output_creation = program.add_argument_group('output creation')
 	group_output_creation.add_argument('--output-image-quality', help = wording.get('help.output_image_quality'), type = int, default = config.get_int_value('output_creation.output_image_quality', '80'), choices = facefusion.choices.output_image_quality_range, metavar = create_metavar(facefusion.choices.output_image_quality_range))
@@ -96,38 +117,44 @@ def cli() -> None:
 	group_output_creation.add_argument('--output-video-resolution', help = wording.get('help.output_video_resolution'), default = config.get_str_value('output_creation.output_video_resolution'))
 	group_output_creation.add_argument('--output-video-fps', help = wording.get('help.output_video_fps'), type = float, default = config.get_str_value('output_creation.output_video_fps'))
 	group_output_creation.add_argument('--skip-audio', help = wording.get('help.skip_audio'), action = 'store_true', default = config.get_bool_value('output_creation.skip_audio'))
+	job_store.register_step_args([ 'output_image_quality', 'output_image_resolution', 'output_video_encoder', 'output_video_preset', 'output_video_quality', 'output_video_resolution', 'output_video_fps', 'skip_audio' ])
 	# frame processors
 	available_frame_processors = list_directory('facefusion/processors/frame/modules')
 	program = ArgumentParser(parents = [ program ], formatter_class = program.formatter_class, add_help = True)
 	group_frame_processors = program.add_argument_group('frame processors')
 	group_frame_processors.add_argument('--frame-processors', help = wording.get('help.frame_processors').format(choices = ', '.join(available_frame_processors)), default = config.get_str_list('frame_processors.frame_processors', 'face_swapper'), nargs = '+')
+	job_store.register_step_args([ 'frame_processors' ])
 	for frame_processor in available_frame_processors:
 		frame_processor_module = load_frame_processor_module(frame_processor)
 		frame_processor_module.register_args(group_frame_processors)
 	# uis
 	available_ui_layouts = list_directory('facefusion/uis/layouts')
 	group_uis = program.add_argument_group('uis')
-	group_uis.add_argument('--open-browser', help=wording.get('help.open_browser'), action = 'store_true', default = config.get_bool_value('uis.open_browser'))
+	group_uis.add_argument('--open-browser', help = wording.get('help.open_browser'), action = 'store_true', default = config.get_bool_value('uis.open_browser'))
 	group_uis.add_argument('--ui-layouts', help = wording.get('help.ui_layouts').format(choices = ', '.join(available_ui_layouts)), default = config.get_str_list('uis.ui_layouts', 'default'), nargs = '+')
-	run(program)
+	# job manager
+	group_job_manager = program.add_argument_group('job manager')
+	group_job_manager.add_argument('--job-create', help = wording.get('help.job_create'))
+	group_job_manager.add_argument('--job-submit', help = wording.get('help.job_submit'))
+	group_job_manager.add_argument('--job-submit-all', help = wording.get('help.job_submit_all'), action = 'store_true')
+	group_job_manager.add_argument('--job-delete', help = wording.get('help.job_delete'))
+	group_job_manager.add_argument('--job-delete-all', help = wording.get('help.job_delete_all'), action = 'store_true')
+	group_job_manager.add_argument('--job-add-step', help = wording.get('help.job_add_step'))
+	group_job_manager.add_argument('--job-remix-step', help = wording.get('help.job_remix_step'), nargs = 2)
+	group_job_manager.add_argument('--job-insert-step', help = wording.get('help.job_insert_step'), nargs = 2)
+	group_job_manager.add_argument('--job-remove-step', help = wording.get('help.job_remove_step'), nargs = 2)
+	# job runner
+	group_job_runner = program.add_argument_group('job runner')
+	group_job_runner.add_argument('--job-run', help = wording.get('help.job_run'))
+	group_job_runner.add_argument('--job-run-all', help = wording.get('help.job_run_all'), action = 'store_true')
+	group_job_runner.add_argument('--job-retry', help = wording.get('help.job_retry'))
+	group_job_runner.add_argument('--job-retry-all', help = wording.get('help.job_retry_all'), action = 'store_true')
+	return program
 
 
-def apply_config(program : ArgumentParser) -> None:
-	known_args = program.parse_known_args()
-	facefusion.globals.config_path = get_first(known_args).config_path
-
-
-def validate_args(program : ArgumentParser) -> None:
-	try:
-		for action in program._actions:
-			if action.default:
-				if isinstance(action.default, list):
-					for default in action.default:
-						program._check_value(action, default)
-				else:
-					program._check_value(action, action.default)
-	except Exception as exception:
-		program.error(str(exception))
+def apply_config_path(program : ArgumentParser) -> None:
+	known_args, _ = program.parse_known_args()
+	facefusion.globals.config_path = known_args.config_path
 
 
 def apply_args(program : ArgumentParser) -> None:
@@ -136,6 +163,7 @@ def apply_args(program : ArgumentParser) -> None:
 	facefusion.globals.source_paths = args.source_paths
 	facefusion.globals.target_path = args.target_path
 	facefusion.globals.output_path = args.output_path
+	facefusion.globals.jobs_path = args.jobs_path
 	# misc
 	facefusion.globals.force_download = args.force_download
 	facefusion.globals.skip_download = args.skip_download
@@ -154,10 +182,7 @@ def apply_args(program : ArgumentParser) -> None:
 	facefusion.globals.face_analyser_age = args.face_analyser_age
 	facefusion.globals.face_analyser_gender = args.face_analyser_gender
 	facefusion.globals.face_detector_model = args.face_detector_model
-	if args.face_detector_size in facefusion.choices.face_detector_set[args.face_detector_model]:
-		facefusion.globals.face_detector_size = args.face_detector_size
-	else:
-		facefusion.globals.face_detector_size = '640x640'
+	facefusion.globals.face_detector_size = args.face_detector_size
 	facefusion.globals.face_detector_score = args.face_detector_score
 	facefusion.globals.face_landmarker_score = args.face_landmarker_score
 	# face selector
@@ -209,38 +234,41 @@ def apply_args(program : ArgumentParser) -> None:
 
 
 def run(program : ArgumentParser) -> None:
-	validate_args(program)
 	apply_args(program)
 	logger.init(facefusion.globals.log_level)
+	args = program.parse_args()
 
 	if facefusion.globals.system_memory_limit > 0:
 		limit_system_memory(facefusion.globals.system_memory_limit)
+	if args.job_create or args.job_submit or args.job_submit_all or args.job_delete or args.job_delete_all or args.job_add_step or args.job_remix_step or args.job_insert_step or args.job_remove_step:
+		if not job_manager.init_jobs(facefusion.globals.jobs_path):
+			hard_exit(1)
+		error_code = route_job_manager(program)
+		hard_exit(error_code)
 	if facefusion.globals.force_download:
 		force_download()
-		return
+		return conditional_exit(0)
 	if not pre_check() or not content_analyser.pre_check() or not face_analyser.pre_check() or not face_masker.pre_check() or not voice_extractor.pre_check():
-		return
+		return conditional_exit(2)
 	for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
 		if not frame_processor_module.pre_check():
-			return
-	if facefusion.globals.headless:
-		conditional_process()
+			return conditional_exit(2)
+
+	if args.job_run or args.job_run_all or args.job_retry or args.job_retry_all:
+		if not job_manager.init_jobs(facefusion.globals.jobs_path):
+			hard_exit(1)
+		error_code = route_job_runner(program)
+		hard_exit(error_code)
+	elif facefusion.globals.headless:
+		error_code = conditional_process()
+		return conditional_exit(error_code)
 	else:
 		import facefusion.uis.core as ui
 
 		for ui_layout in ui.get_ui_layouts_modules(facefusion.globals.ui_layouts):
 			if not ui_layout.pre_check():
-				return
+				return conditional_exit(2)
 		ui.launch()
-
-
-def destroy() -> None:
-	process_manager.stop()
-	while process_manager.is_processing():
-		sleep(0.5)
-	if facefusion.globals.target_path:
-		clear_temp(facefusion.globals.target_path)
-	sys.exit(0)
 
 
 def pre_check() -> bool:
@@ -253,7 +281,7 @@ def pre_check() -> bool:
 	return True
 
 
-def conditional_process() -> None:
+def conditional_process() -> ErrorCode:
 	start_time = time()
 	for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
 		while not frame_processor_module.post_check():
@@ -261,12 +289,13 @@ def conditional_process() -> None:
 			sleep(0.5)
 		logger.enable()
 		if not frame_processor_module.pre_process('output'):
-			return
+			return 2
 	conditional_append_reference_faces()
 	if is_image(facefusion.globals.target_path):
-		process_image(start_time)
+		return process_image(start_time)
 	if is_video(facefusion.globals.target_path):
-		process_video(start_time)
+		return process_video(start_time)
+	return 0
 
 
 def conditional_append_reference_faces() -> None:
@@ -291,7 +320,7 @@ def conditional_append_reference_faces() -> None:
 def force_download() -> None:
 	download_directory_path = resolve_relative_path('../.assets/models')
 	available_frame_processors = list_directory('facefusion/processors/frame/modules')
-	model_list =\
+	models =\
 	[
 		content_analyser.MODELS,
 		face_analyser.MODELS,
@@ -301,15 +330,129 @@ def force_download() -> None:
 
 	for frame_processor_module in get_frame_processors_modules(available_frame_processors):
 		if hasattr(frame_processor_module, 'MODELS'):
-			model_list.append(frame_processor_module.MODELS)
-	model_urls = [ models[model].get('url') for models in model_list for model in models ]
+			models.append(frame_processor_module.MODELS)
+	model_urls = [ models[model].get('url') for models in models for model in models ]
 	conditional_download(download_directory_path, model_urls)
 
 
-def process_image(start_time : float) -> None:
-	normed_output_path = normalize_output_path(facefusion.globals.target_path, facefusion.globals.output_path)
+def route_job_manager(program : ArgumentParser) -> ErrorCode:
+	args = program.parse_args()
+	step_program = reduce_args(program, job_store.get_step_args())
+	step_args = vars(step_program.parse_args())
+
+	if args.job_create:
+		if job_manager.create_job(args.job_create):
+			logger.info(wording.get('job_created').format(job_id = args.job_create), __name__.upper())
+			return 0
+		logger.error(wording.get('job_not_created').format(job_id = args.job_create), __name__.upper())
+		return 1
+	if args.job_submit:
+		if job_manager.submit_job(args.job_submit):
+			logger.info(wording.get('job_submitted').format(job_id = args.job_submit), __name__.upper())
+			return 0
+		logger.error(wording.get('job_not_submitted').format(job_id = args.job_submit), __name__.upper())
+		return 1
+	if args.job_submit_all:
+		if job_manager.submit_jobs():
+			logger.info(wording.get('job_all_submitted'), __name__.upper())
+			return 0
+		logger.error(wording.get('job_all_not_submitted'), __name__.upper())
+		return 1
+	if args.job_delete:
+		if job_manager.delete_job(args.job_delete):
+			logger.info(wording.get('job_deleted').format(job_id = args.job_delete), __name__.upper())
+			return 0
+		logger.error(wording.get('job_not_deleted').format(job_id = args.job_delete), __name__.upper())
+		return 1
+	if args.job_delete_all:
+		if job_manager.delete_jobs():
+			logger.info(wording.get('job_all_deleted'), __name__.upper())
+			return 0
+		logger.error(wording.get('job_all_not_deleted'), __name__.upper())
+		return 1
+	if args.job_add_step:
+		if job_manager.add_step(args.job_add_step, step_args):
+			logger.info(wording.get('job_step_added').format(job_id = args.job_add_step), __name__.upper())
+			return 0
+		logger.error(wording.get('job_step_not_added').format(job_id = args.job_add_step), __name__.upper())
+		return 1
+	if args.job_remix_step:
+		job_id, step_index = args.job_remix_step
+		step_index = int(step_index)
+
+		if job_manager.remix_step(job_id, step_index, step_args):
+			logger.info(wording.get('job_remix_step_added').format(job_id = job_id, step_index = step_index), __name__.upper())
+			return 0
+		logger.error(wording.get('job_remix_step_not_added').format(job_id = job_id, step_index = step_index), __name__.upper())
+		return 1
+	if args.job_insert_step:
+		job_id, step_index = args.job_insert_step
+		step_index = int(step_index)
+
+		if job_manager.insert_step(job_id, step_index, step_args):
+			logger.info(wording.get('job_step_inserted').format(job_id = job_id, step_index = step_index), __name__.upper())
+			return 0
+		logger.error(wording.get('job_step_not_inserted').format(job_id = job_id, step_index = step_index), __name__.upper())
+		return 1
+	if args.job_remove_step:
+		job_id, step_index = args.job_remove_step
+		step_index = int(step_index)
+
+		if job_manager.remove_step(job_id, step_index):
+			logger.info(wording.get('job_step_removed').format(job_id = job_id, step_index = step_index), __name__.upper())
+			return 0
+		logger.error(wording.get('job_step_not_removed').format(job_id = job_id, step_index = step_index), __name__.upper())
+		return 1
+	return 1
+
+
+def route_job_runner(program : ArgumentParser) -> ErrorCode:
+	args = program.parse_args()
+
+	if args.job_run:
+		logger.info(wording.get('running_job').format(job_id = args.job_run), __name__.upper())
+		if job_runner.run_job(args.job_run, process_step):
+			logger.info(wording.get('processing_job_succeed').format(job_id = args.job_run), __name__.upper())
+			return 0
+		logger.info(wording.get('processing_job_failed').format(job_id = args.job_run), __name__.upper())
+		return 1
+	if args.job_run_all:
+		logger.info(wording.get('running_jobs'), __name__.upper())
+		if job_runner.run_jobs(process_step):
+			logger.info(wording.get('processing_jobs_succeed'), __name__.upper())
+			return 0
+		logger.info(wording.get('processing_jobs_failed'), __name__.upper())
+		return 1
+	if args.job_retry:
+		logger.info(wording.get('retrying_job').format(job_id = args.job_retry), __name__.upper())
+		if job_runner.retry_job(args.job_retry, process_step):
+			logger.info(wording.get('processing_job_succeed').format(job_id = args.job_retry), __name__.upper())
+			return 0
+		logger.info(wording.get('processing_job_failed').format(job_id = args.job_retry), __name__.upper())
+		return 1
+	if args.job_retry_all:
+		logger.info(wording.get('retrying_jobs'), __name__.upper())
+		if job_runner.retry_jobs(process_step):
+			logger.info(wording.get('processing_jobs_succeed'), __name__.upper())
+			return 0
+		logger.info(wording.get('processing_jobs_failed'), __name__.upper())
+		return 1
+	return 2
+
+
+def process_step(step_args : Args) -> bool:
+	program = create_program()
+	program = update_args(program, step_args)
+	if validate_args(program):
+		apply_args(program)
+		error_code = conditional_process()
+		return error_code == 0
+	return False
+
+
+def process_image(start_time : float) -> ErrorCode:
 	if analyse_image(facefusion.globals.target_path):
-		return
+		return 3
 	# clear temp
 	logger.debug(wording.get('clearing_temp'), __name__.upper())
 	clear_temp(facefusion.globals.target_path)
@@ -324,7 +467,7 @@ def process_image(start_time : float) -> None:
 		logger.debug(wording.get('copying_image_succeed'), __name__.upper())
 	else:
 		logger.error(wording.get('copying_image_failed'), __name__.upper())
-		return
+		return 1
 	# process image
 	temp_file_path = get_temp_file_path(facefusion.globals.target_path)
 	for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
@@ -332,10 +475,10 @@ def process_image(start_time : float) -> None:
 		frame_processor_module.process_image(facefusion.globals.source_paths, temp_file_path, temp_file_path)
 		frame_processor_module.post_process()
 	if is_process_stopping():
-		return
+		return 4
 	# finalize image
 	logger.info(wording.get('finalizing_image').format(resolution = facefusion.globals.output_image_resolution), __name__.upper())
-	if finalize_image(facefusion.globals.target_path, normed_output_path, facefusion.globals.output_image_resolution):
+	if finalize_image(facefusion.globals.target_path, facefusion.globals.output_path, facefusion.globals.output_image_resolution):
 		logger.debug(wording.get('finalizing_image_succeed'), __name__.upper())
 	else:
 		logger.warn(wording.get('finalizing_image_skipped'), __name__.upper())
@@ -343,19 +486,19 @@ def process_image(start_time : float) -> None:
 	logger.debug(wording.get('clearing_temp'), __name__.upper())
 	clear_temp(facefusion.globals.target_path)
 	# validate image
-	if is_image(normed_output_path):
+	if is_image(facefusion.globals.output_path):
 		seconds = '{:.2f}'.format((time() - start_time) % 60)
 		logger.info(wording.get('processing_image_succeed').format(seconds = seconds), __name__.upper())
 		conditional_log_statistics()
 	else:
 		logger.error(wording.get('processing_image_failed'), __name__.upper())
 	process_manager.end()
+	return 0
 
 
-def process_video(start_time : float) -> None:
-	normed_output_path = normalize_output_path(facefusion.globals.target_path, facefusion.globals.output_path)
+def process_video(start_time : float) -> ErrorCode:
 	if analyse_video(facefusion.globals.target_path, facefusion.globals.trim_frame_start, facefusion.globals.trim_frame_end):
-		return
+		return 3
 	# clear temp
 	logger.debug(wording.get('clearing_temp'), __name__.upper())
 	clear_temp(facefusion.globals.target_path)
@@ -371,9 +514,9 @@ def process_video(start_time : float) -> None:
 		logger.debug(wording.get('extracting_frames_succeed'), __name__.upper())
 	else:
 		if is_process_stopping():
-			return
+			return 4
 		logger.error(wording.get('extracting_frames_failed'), __name__.upper())
-		return
+		return 1
 	# process frames
 	temp_frame_paths = get_temp_frame_paths(facefusion.globals.target_path)
 	if temp_frame_paths:
@@ -382,52 +525,53 @@ def process_video(start_time : float) -> None:
 			frame_processor_module.process_video(facefusion.globals.source_paths, temp_frame_paths)
 			frame_processor_module.post_process()
 		if is_process_stopping():
-			return
+			return 4
 	else:
 		logger.error(wording.get('temp_frames_not_found'), __name__.upper())
-		return
+		return 1
 	# merge video
 	logger.info(wording.get('merging_video').format(resolution = facefusion.globals.output_video_resolution, fps = facefusion.globals.output_video_fps), __name__.upper())
 	if merge_video(facefusion.globals.target_path, facefusion.globals.output_video_resolution, facefusion.globals.output_video_fps):
 		logger.debug(wording.get('merging_video_succeed'), __name__.upper())
 	else:
 		if is_process_stopping():
-			return
+			return 4
 		logger.error(wording.get('merging_video_failed'), __name__.upper())
-		return
+		return 1
 	# handle audio
 	if facefusion.globals.skip_audio:
 		logger.info(wording.get('skipping_audio'), __name__.upper())
-		move_temp(facefusion.globals.target_path, normed_output_path)
+		move_temp(facefusion.globals.target_path, facefusion.globals.output_path)
 	else:
 		if 'lip_syncer' in facefusion.globals.frame_processors:
 			source_audio_path = get_first(filter_audio_paths(facefusion.globals.source_paths))
-			if source_audio_path and replace_audio(facefusion.globals.target_path, source_audio_path, normed_output_path):
+			if source_audio_path and replace_audio(facefusion.globals.target_path, source_audio_path, facefusion.globals.output_path):
 				logger.debug(wording.get('restoring_audio_succeed'), __name__.upper())
 			else:
 				if is_process_stopping():
-					return
+					return 4
 				logger.warn(wording.get('restoring_audio_skipped'), __name__.upper())
-				move_temp(facefusion.globals.target_path, normed_output_path)
+				move_temp(facefusion.globals.target_path, facefusion.globals.output_path)
 		else:
-			if restore_audio(facefusion.globals.target_path, normed_output_path, facefusion.globals.output_video_fps):
+			if restore_audio(facefusion.globals.target_path, facefusion.globals.output_path, facefusion.globals.output_video_fps):
 				logger.debug(wording.get('restoring_audio_succeed'), __name__.upper())
 			else:
 				if is_process_stopping():
-					return
+					return 4
 				logger.warn(wording.get('restoring_audio_skipped'), __name__.upper())
-				move_temp(facefusion.globals.target_path, normed_output_path)
+				move_temp(facefusion.globals.target_path, facefusion.globals.output_path)
 	# clear temp
 	logger.debug(wording.get('clearing_temp'), __name__.upper())
 	clear_temp(facefusion.globals.target_path)
 	# validate video
-	if is_video(normed_output_path):
+	if is_video(facefusion.globals.output_path):
 		seconds = '{:.2f}'.format((time() - start_time))
 		logger.info(wording.get('processing_video_succeed').format(seconds = seconds), __name__.upper())
 		conditional_log_statistics()
 	else:
 		logger.error(wording.get('processing_video_failed'), __name__.upper())
 	process_manager.end()
+	return 0
 
 
 def is_process_stopping() -> bool:

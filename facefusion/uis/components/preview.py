@@ -67,7 +67,8 @@ def render() -> None:
 
 
 def listen() -> None:
-	PREVIEW_FRAME_SLIDER.release(update_preview_image, inputs = PREVIEW_FRAME_SLIDER, outputs = PREVIEW_IMAGE)
+	for method in [ 'change', 'release' ]:
+		getattr(PREVIEW_FRAME_SLIDER, method)(update_preview_image, inputs = PREVIEW_FRAME_SLIDER, outputs = PREVIEW_IMAGE, show_progress = 'hidden')
 	reference_face_position_gallery = get_ui_component('reference_face_position_gallery')
 	if reference_face_position_gallery:
 		reference_face_position_gallery.select(update_preview_image, inputs = PREVIEW_FRAME_SLIDER, outputs = PREVIEW_IMAGE)
@@ -108,8 +109,6 @@ def listen() -> None:
 		'face_enhancer_blend_slider',
 		'frame_colorizer_blend_slider',
 		'frame_enhancer_blend_slider',
-		'trim_frame_start_slider',
-		'trim_frame_end_slider',
 		'reference_face_distance_slider',
 		'face_mask_blur_slider',
 		'face_mask_padding_top_slider',
@@ -125,6 +124,7 @@ def listen() -> None:
 		'frame_processors_checkbox_group',
 		'face_enhancer_model_dropdown',
 		'face_swapper_model_dropdown',
+		'face_swapper_pixel_boost_dropdown',
 		'frame_colorizer_model_dropdown',
 		'frame_enhancer_model_dropdown',
 		'lip_syncer_model_dropdown',
@@ -185,7 +185,7 @@ def update_preview_frame_slider() -> gradio.Slider:
 	if is_video(facefusion.globals.target_path):
 		video_frame_total = count_video_frame_total(facefusion.globals.target_path)
 		return gradio.Slider(maximum = video_frame_total, visible = True)
-	return gradio.Slider(value = None, maximum = None, visible = False)
+	return gradio.Slider(value = 0, visible = False)
 
 
 def process_preview_frame(reference_faces : FaceSet, source_face : Face, source_audio_frame : AudioFrame, target_vision_frame : VisionFrame) -> VisionFrame:
