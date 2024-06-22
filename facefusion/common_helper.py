@@ -1,6 +1,6 @@
 from typing import List, Any
-from datetime import datetime
 import platform
+import sys
 
 
 def create_metavar(ranges : List[Any]) -> str:
@@ -47,5 +47,14 @@ def to_lower_case(__string__ : Any) -> str:
 	return str(__string__).lower()
 
 
+def get_argument_value(argument : str) -> Optional[str]:
+	try:
+		index = sys.argv.index(argument) + 1
+		return sys.argv[index]
+	except (ValueError, IndexError):
+		return None
+
+
 def get_first(__list__ : Any) -> Any:
 	return next(iter(__list__), None)
+

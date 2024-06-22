@@ -18,6 +18,10 @@ def thread_semaphore() -> threading.Semaphore:
 
 
 def conditional_thread_semaphore() -> Union[threading.Semaphore, ContextManager[None]]:
+<<<<<<< HEAD
 	if has_execution_provider('directml'):
+=======
+	if has_execution_provider('DmlExecutionProvider'):
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 		return THREAD_SEMAPHORE
 	return NULL_CONTEXT

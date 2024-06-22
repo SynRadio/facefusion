@@ -6,8 +6,13 @@ import numpy
 import onnxruntime
 
 import facefusion.globals
+<<<<<<< HEAD
 import facefusion.jobs.job_manager
 import facefusion.jobs.job_store
+=======
+import facefusion.job_manager
+import facefusion.job_store
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 import facefusion.processors.frame.core as frame_processors
 from facefusion import config, process_manager, logger, wording
 from facefusion.face_analyser import get_many_faces, clear_face_analyser, find_similar_faces, get_one_face
@@ -16,7 +21,10 @@ from facefusion.face_helper import warp_face_by_face_landmark_5, paste_back
 from facefusion.execution import apply_execution_provider_options
 from facefusion.content_analyser import clear_content_analyser
 from facefusion.face_store import get_reference_faces
+<<<<<<< HEAD
 from facefusion.program_helper import find_argument_group
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 from facefusion.thread_helper import thread_lock, thread_semaphore
 from facefusion.typing import Face, VisionFrame, UpdateProgress, ProcessMode, ModelSet, OptionsWithModel, QueuePayload
 from facefusion.common_helper import create_metavar
@@ -134,11 +142,17 @@ def set_options(key : Literal['model'], value : Any) -> None:
 
 
 def register_args(program : ArgumentParser) -> None:
+<<<<<<< HEAD
 	group_frame_processors = find_argument_group(program, 'frame processors')
 	if group_frame_processors:
 		group_frame_processors.add_argument('--face-enhancer-model', help = wording.get('help.face_enhancer_model'), default = config.get_str_value('frame_processors.face_enhancer_model', 'gfpgan_1.4'), choices = frame_processors_choices.face_enhancer_models)
 		group_frame_processors.add_argument('--face-enhancer-blend', help = wording.get('help.face_enhancer_blend'), type = int, default = config.get_int_value('frame_processors.face_enhancer_blend', '80'), choices = frame_processors_choices.face_enhancer_blend_range, metavar = create_metavar(frame_processors_choices.face_enhancer_blend_range))
 		facefusion.jobs.job_store.register_step_keys([ 'face_enhancer_model', 'face_enhancer_blend' ])
+=======
+	program.add_argument('--face-enhancer-model', help = wording.get('help.face_enhancer_model'), default = config.get_str_value('frame_processors.face_enhancer_model', 'gfpgan_1.4'), choices = frame_processors_choices.face_enhancer_models)
+	program.add_argument('--face-enhancer-blend', help = wording.get('help.face_enhancer_blend'), type = int, default = config.get_int_value('frame_processors.face_enhancer_blend', '80'), choices = frame_processors_choices.face_enhancer_blend_range, metavar = create_metavar(frame_processors_choices.face_enhancer_blend_range))
+	facefusion.job_store.register_step_args([ 'face_enhancer_model', 'face_enhancer_blend' ])
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def apply_args(program : ArgumentParser) -> None:

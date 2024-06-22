@@ -6,14 +6,22 @@ import numpy
 import onnxruntime
 
 import facefusion.globals
+<<<<<<< HEAD
 import facefusion.jobs.job_manager
 import facefusion.jobs.job_store
+=======
+import facefusion.job_manager
+import facefusion.job_store
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 import facefusion.processors.frame.core as frame_processors
 from facefusion import config, process_manager, logger, wording
 from facefusion.face_analyser import clear_face_analyser
 from facefusion.content_analyser import clear_content_analyser
 from facefusion.execution import apply_execution_provider_options
+<<<<<<< HEAD
 from facefusion.program_helper import find_argument_group
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 from facefusion.thread_helper import thread_lock, conditional_thread_semaphore
 from facefusion.typing import Face, VisionFrame, UpdateProgress, ProcessMode, ModelSet, OptionsWithModel, QueuePayload
 from facefusion.common_helper import create_metavar
@@ -138,11 +146,17 @@ def set_options(key : Literal['model'], value : Any) -> None:
 
 
 def register_args(program : ArgumentParser) -> None:
+<<<<<<< HEAD
 	group_frame_processors = find_argument_group(program, 'frame processors')
 	if group_frame_processors:
 		group_frame_processors.add_argument('--frame-enhancer-model', help = wording.get('help.frame_enhancer_model'), default = config.get_str_value('frame_processors.frame_enhancer_model', 'span_kendata_x4'), choices = frame_processors_choices.frame_enhancer_models)
 		group_frame_processors.add_argument('--frame-enhancer-blend', help = wording.get('help.frame_enhancer_blend'), type = int, default = config.get_int_value('frame_processors.frame_enhancer_blend', '80'), choices = frame_processors_choices.frame_enhancer_blend_range, metavar = create_metavar(frame_processors_choices.frame_enhancer_blend_range))
 		facefusion.jobs.job_store.register_step_keys([ 'frame_enhancer_model', 'frame_enhancer_blend' ])
+=======
+	program.add_argument('--frame-enhancer-model', help = wording.get('help.frame_enhancer_model'), default = config.get_str_value('frame_processors.frame_enhancer_model', 'span_kendata_x4'), choices = frame_processors_choices.frame_enhancer_models)
+	program.add_argument('--frame-enhancer-blend', help = wording.get('help.frame_enhancer_blend'), type = int, default = config.get_int_value('frame_processors.frame_enhancer_blend', '80'), choices = frame_processors_choices.frame_enhancer_blend_range, metavar = create_metavar(frame_processors_choices.frame_enhancer_blend_range))
+	facefusion.job_store.register_step_args([ 'frame_enhancer_model', 'frame_enhancer_blend' ])
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def apply_args(program : ArgumentParser) -> None:

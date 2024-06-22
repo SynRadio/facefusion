@@ -4,7 +4,11 @@ import pytest
 
 import facefusion.globals
 from facefusion import process_manager
+<<<<<<< HEAD
 from facefusion.temp_helper import get_temp_directory_path, create_temp_directory, clear_temp_directory
+=======
+from facefusion.temp_helper import get_temp_directory_path, create_temp, clear_temp
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 from facefusion.download import conditional_download
 from facefusion.ffmpeg import extract_frames, concat_video, read_audio_buffer
 from .helper import get_test_examples_directory, prepare_test_output_directory, get_test_example_file, get_test_output_file
@@ -30,7 +34,10 @@ def before_each() -> None:
 	facefusion.globals.trim_frame_start = None
 	facefusion.globals.trim_frame_end = None
 	facefusion.globals.temp_frame_format = 'jpg'
+<<<<<<< HEAD
 	facefusion.globals.output_audio_encoder = 'aac'
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	prepare_test_output_directory()
 
 
@@ -119,6 +126,17 @@ def test_concat_video() -> None:
 	]
 
 	assert concat_video(output_path, temp_output_paths) is True
+
+
+def test_concat_video() -> None:
+	target_paths =\
+	[
+		get_test_example_file('target-240p.mp4'),
+		get_test_example_file('target-240p.mp4')
+	]
+	output_path = get_test_output_file('test-concat-video.mp4')
+
+	assert concat_video(target_paths, output_path) is True
 
 
 def test_read_audio_buffer() -> None:

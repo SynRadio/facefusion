@@ -8,7 +8,11 @@ import facefusion.globals
 from facefusion import logger, process_manager
 from facefusion.filesystem import remove_file
 from facefusion.typing import OutputVideoPreset, Fps, AudioBuffer
+<<<<<<< HEAD
 from facefusion.temp_helper import get_temp_file_path, get_temp_frames_pattern
+=======
+from facefusion.temp_helper import get_temp_frames_pattern, get_temp_file_path
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 from facefusion.vision import restrict_video_fps
 
 
@@ -101,6 +105,14 @@ def concat_video(output_path : str, temp_output_paths : List[str]) -> bool:
 	return process.returncode == 0
 
 
+def concat_video(target_paths : List[str], output_path : str) -> bool:
+	with tempfile.NamedTemporaryFile(mode = 'w', delete = False) as concat_video_file:
+		for target_path in target_paths:
+			concat_video_file.write('file \'' + os.path.abspath(target_path) + '\'' + os.linesep)
+	commands = [ '-f', 'concat', '-safe', '0', '-i', concat_video_file.name, '-c', 'copy', '-y', os.path.abspath(output_path) ]
+	return run_ffmpeg(commands)
+
+
 def copy_image(target_path : str, temp_image_resolution : str) -> bool:
 	temp_file_path = get_temp_file_path(target_path)
 	temp_image_compression = calc_image_compression(target_path, 100)
@@ -113,6 +125,13 @@ def finalize_image(target_path : str, output_path : str, output_image_resolution
 	output_image_compression = calc_image_compression(target_path, facefusion.globals.output_image_quality)
 	commands = [ '-i', temp_file_path, '-s', str(output_image_resolution), '-q:v', str(output_image_compression), '-y', output_path ]
 	return run_ffmpeg(commands).returncode == 0
+
+
+def calc_image_compression(image_path : str, image_quality : int) -> int:
+	is_webp = filetype.guess_mime(image_path) == 'image/webp'
+	if is_webp:
+		image_quality = 100 - image_quality
+	return round(31 - (image_quality * 0.31))
 
 
 def calc_image_compression(image_path : str, image_quality : int) -> int:

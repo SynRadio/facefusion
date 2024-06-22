@@ -30,7 +30,11 @@ def render() -> None:
 
 
 def listen() -> None:
+<<<<<<< HEAD
 	TRIM_FRAME_RANGE_SLIDER.release(update_trim_frame, inputs = TRIM_FRAME_RANGE_SLIDER)
+=======
+	TRIM_FRAME_RANGE_SLIDER.change(update_trim_frame, inputs = TRIM_FRAME_RANGE_SLIDER)
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	for ui_component in get_ui_components(
 	[
 		'target_image',
@@ -50,6 +54,11 @@ def remote_update() -> RangeSlider:
 
 
 def update_trim_frame(trim_frame : Tuple[float, float]) -> None:
+<<<<<<< HEAD
+=======
+	trim_frame_start = int(trim_frame[0])
+	trim_frame_end = int(trim_frame[1])
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	clear_static_faces()
 	trim_frame_start = int(trim_frame[0])
 	trim_frame_end = int(trim_frame[1])

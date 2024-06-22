@@ -1,6 +1,9 @@
 import os
 import tempfile
+<<<<<<< HEAD
 import hashlib
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 from typing import Optional, Tuple
 import gradio
 
@@ -26,7 +29,11 @@ OUTPUT_VIDEO_FPS_SLIDER : Optional[gradio.Slider] = None
 def suggest_output_path(target_path : str) -> Optional[str]:
 	if is_image(target_path) or is_video(target_path):
 		_, target_extension = os.path.splitext(target_path)
+<<<<<<< HEAD
 		return os.path.join(tempfile.gettempdir(), hashlib.sha1().hexdigest()[:8] + target_extension)
+=======
+		return os.path.join(tempfile.gettempdir(), 'output' + target_extension)
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	return None
 
 
@@ -131,23 +138,39 @@ def listen() -> None:
 		'target_video'
 	]):
 		for method in [ 'upload', 'change', 'clear' ]:
+<<<<<<< HEAD
 			getattr(ui_component, method)(remote_update, outputs = [ OUTPUT_PATH_TEXTBOX, OUTPUT_IMAGE_QUALITY_SLIDER, OUTPUT_IMAGE_RESOLUTION_DROPDOWN, OUTPUT_AUDIO_ENCODER_DROPDOWN, OUTPUT_VIDEO_ENCODER_DROPDOWN, OUTPUT_VIDEO_PRESET_DROPDOWN, OUTPUT_VIDEO_QUALITY_SLIDER, OUTPUT_VIDEO_RESOLUTION_DROPDOWN, OUTPUT_VIDEO_FPS_SLIDER ])
 
 
 def remote_update() -> Tuple[gradio.Textbox, gradio.Slider, gradio.Dropdown, gradio.Dropdown, gradio.Dropdown, gradio.Dropdown, gradio.Slider, gradio.Dropdown, gradio.Slider]:
+=======
+			getattr(ui_component, method)(remote_update, outputs = [ OUTPUT_PATH_TEXTBOX, OUTPUT_IMAGE_QUALITY_SLIDER, OUTPUT_IMAGE_RESOLUTION_DROPDOWN, OUTPUT_VIDEO_ENCODER_DROPDOWN, OUTPUT_VIDEO_PRESET_DROPDOWN, OUTPUT_VIDEO_QUALITY_SLIDER, OUTPUT_VIDEO_RESOLUTION_DROPDOWN, OUTPUT_VIDEO_FPS_SLIDER ])
+
+
+def remote_update() -> Tuple[gradio.Textbox, gradio.Slider, gradio.Dropdown, gradio.Dropdown, gradio.Dropdown, gradio.Slider, gradio.Dropdown, gradio.Slider]:
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	facefusion.globals.output_path = suggest_output_path(facefusion.globals.target_path)
 	if is_image(facefusion.globals.target_path):
 		output_image_resolution = detect_image_resolution(facefusion.globals.target_path)
 		output_image_resolutions = create_image_resolutions(output_image_resolution)
 		facefusion.globals.output_image_resolution = pack_resolution(output_image_resolution)
+<<<<<<< HEAD
 		return gradio.Textbox(visible = True, value = facefusion.globals.output_path), gradio.Slider(visible = True), gradio.Dropdown(visible = True, value = facefusion.globals.output_image_resolution, choices = output_image_resolutions), gradio.Dropdown(visible = False), gradio.Dropdown(visible = False), gradio.Dropdown(visible = False), gradio.Slider(visible = False), gradio.Dropdown(visible = False, value = None, choices = None), gradio.Slider(visible = False, value = None)
+=======
+		return gradio.Textbox(visible = True, value = facefusion.globals.output_path), gradio.Slider(visible = True), gradio.Dropdown(visible = True, value = facefusion.globals.output_image_resolution, choices = output_image_resolutions), gradio.Dropdown(visible = False), gradio.Dropdown(visible = False), gradio.Slider(visible = False), gradio.Dropdown(visible = False, value = None, choices = None), gradio.Slider(visible = False, value = None)
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	if is_video(facefusion.globals.target_path):
 		output_video_resolution = detect_video_resolution(facefusion.globals.target_path)
 		output_video_resolutions = create_video_resolutions(output_video_resolution)
 		facefusion.globals.output_video_resolution = pack_resolution(output_video_resolution)
 		facefusion.globals.output_video_fps = detect_video_fps(facefusion.globals.target_path)
+<<<<<<< HEAD
 		return gradio.Textbox(visible = True, value = facefusion.globals.output_path), gradio.Slider(visible = False), gradio.Dropdown(visible = False), gradio.Dropdown(visible = True), gradio.Dropdown(visible = True), gradio.Dropdown(visible = True), gradio.Slider(visible = True), gradio.Dropdown(visible = True, value = facefusion.globals.output_video_resolution, choices = output_video_resolutions), gradio.Slider(visible = True, value = facefusion.globals.output_video_fps)
 	return gradio.Textbox(visible = False, value = facefusion.globals.output_path), gradio.Slider(visible = False), gradio.Dropdown(visible = False, value = None, choices = None), gradio.Dropdown(visible = False), gradio.Dropdown(visible = False), gradio.Dropdown(visible = False), gradio.Slider(visible = False), gradio.Dropdown(visible = False, value = None, choices = None), gradio.Slider(visible = False, value = None)
+=======
+		return gradio.Textbox(visible = True, value = facefusion.globals.output_path), gradio.Slider(visible = False), gradio.Dropdown(visible = False), gradio.Dropdown(visible = True), gradio.Dropdown(visible = True), gradio.Slider(visible = True), gradio.Dropdown(visible = True, value = facefusion.globals.output_video_resolution, choices = output_video_resolutions), gradio.Slider(visible = True, value = facefusion.globals.output_video_fps)
+	return gradio.Textbox(visible = False, value = facefusion.globals.output_path), gradio.Slider(visible = False), gradio.Dropdown(visible = False, value = None, choices = None), gradio.Dropdown(visible = False), gradio.Dropdown(visible = False), gradio.Slider(visible = False), gradio.Dropdown(visible = False, value = None, choices = None), gradio.Slider(visible = False, value = None)
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def update_output_path(output_path : str) -> None:

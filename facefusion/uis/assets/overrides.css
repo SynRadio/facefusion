@@ -42,7 +42,11 @@
 :root:root:root .range-slider input[type="range"]
 {
 	bottom: 50%;
+<<<<<<< HEAD
 	margin-top: -0.25rem;
+=======
+    margin-top: -0.25rem;
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	top: 50%;
 }
 

@@ -129,7 +129,11 @@ def convert_face_landmark_68_to_5(face_landmark_68 : FaceLandmark68) -> FaceLand
 	return face_landmark_5
 
 
+<<<<<<< HEAD
 def apply_nms(bounding_boxes : List[BoundingBox], iou_limit : float) -> List[int]:
+=======
+def apply_nms(bounding_boxes : List[BoundingBox], iou_threshold : float) -> List[int]:
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	keep_indices = []
 	dimensions = numpy.reshape(bounding_boxes, (-1, 4))
 	x1 = dimensions[:, 0]

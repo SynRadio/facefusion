@@ -37,7 +37,11 @@ def is_directory(directory_path : str) -> bool:
 
 
 def in_directory(file_path : str) -> bool:
+<<<<<<< HEAD
 	if file_path and not is_directory(file_path):
+=======
+	if not is_directory(file_path):
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 		return is_directory(os.path.dirname(file_path))
 	return False
 
@@ -132,8 +136,36 @@ def list_directory(directory_path : str) -> Optional[List[str]]:
 	return None
 
 
+<<<<<<< HEAD
 def remove_directory(directory_path : str) -> bool:
 	if is_directory(directory_path):
 		shutil.rmtree(directory_path, ignore_errors = True)
 		return not is_directory(directory_path)
+=======
+def sanitize_path_for_windows(full_path : str) -> Optional[str]:
+	buffer_size = 0
+
+	while True:
+		unicode_buffer = ctypes.create_unicode_buffer(buffer_size)
+		buffer_threshold = ctypes.windll.kernel32.GetShortPathNameW(full_path, unicode_buffer, buffer_size) #type:ignore[attr-defined]
+
+		if buffer_size > buffer_threshold:
+			return unicode_buffer.value
+		if buffer_threshold == 0:
+			return None
+		buffer_size = buffer_threshold
+
+
+def move_file(file_path : str, move_path : str) -> bool:
+	if is_file(file_path):
+		shutil.move(file_path, move_path)
+		return not is_file(file_path)
+	return False
+
+
+def remove_file(file_path : str) -> bool:
+	if is_file(file_path):
+		os.remove(file_path)
+		return not is_file(file_path)
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	return False

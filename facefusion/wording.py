@@ -139,7 +139,11 @@ WORDING : Dict[str, Any] =\
 		'face_enhancer_model': 'choose the model responsible for enhancing the face',
 		'face_enhancer_blend': 'blend the enhanced into the previous face',
 		'face_swapper_model': 'choose the model responsible for swapping the face',
+<<<<<<< HEAD
 		'face_swapper_pixel_boost': 'choose the pixel boost resolution for the face swapper',
+=======
+		'face_swapper_pixel_boost': 'choose pixel boost resolution for the face swapper',
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 		'frame_colorizer_model': 'choose the model responsible for colorizing the frame',
 		'frame_colorizer_blend': 'blend the colorized into the previous frame',
 		'frame_colorizer_size': 'specify the size of the frame provided to the frame colorizer',
@@ -155,7 +159,10 @@ WORDING : Dict[str, Any] =\
 		'job_submit_all': 'submit all drafted jobs to become a queued jobs',
 		'job_delete': 'delete a drafted, queued, failed or completed job',
 		'job_delete_all': 'delete all drafted, queued, failed and completed jobs',
+<<<<<<< HEAD
 		'job_list': 'list jobs by status',
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 		'job_add_step': 'add a step to a drafted job',
 		'job_remix_step': 'remix a previous step from a drafted job',
 		'job_insert_step': 'insert a step to a drafted job',

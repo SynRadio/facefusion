@@ -1,6 +1,10 @@
 import pytest
 
+<<<<<<< HEAD
 from facefusion.jobs.job_manager import init_jobs, clear_jobs, create_job, submit_job, submit_jobs, delete_job, delete_jobs, find_job_ids, move_job_file, add_step, remix_step, insert_step, remove_step, get_steps, count_step_total, set_step_status, set_steps_status
+=======
+from facefusion.job_manager import init_jobs, clear_jobs, create_job, submit_job, submit_jobs, delete_job, delete_jobs, find_job_ids, move_job_file, add_step, remix_step, insert_step, remove_step, get_steps, set_step_status, set_steps_status
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 from .helper import get_test_jobs_directory
 
 
@@ -11,6 +15,7 @@ def before_each() -> None:
 
 
 def test_create_job() -> None:
+<<<<<<< HEAD
 	args_1 =\
 	{
 		'source_path': 'source-1.jpg',
@@ -61,11 +66,34 @@ def test_submit_jobs() -> None:
 		'output_path': 'output-2.jpg'
 	}
 
+=======
+	assert create_job('job-test-create-job-1') is True
+	assert create_job('job-test-create-job-1') is False
+
+	submit_job('job-test-create-job-1')
+	submit_job('job-test-create-job-2')
+
+	assert create_job('job-test-create-job-1') is False
+
+
+def test_submit_job() -> None:
+	assert submit_job('job-test-submit-job-1') is False
+
+	create_job('job-test-submit-job-1')
+	create_job('job-test-submit-job-2')
+
+	assert submit_job('job-test-submit-job-1') is True
+	assert submit_job('job-test-submit-job-1') is False
+
+
+def test_submit_jobs() -> None:
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 	assert submit_jobs() is False
 
 	create_job('job-test-submit-jobs-1')
 	create_job('job-test-submit-jobs-2')
 
+<<<<<<< HEAD
 	assert submit_jobs() is False
 
 	add_step('job-test-submit-jobs-1', args_1)
@@ -82,6 +110,19 @@ def test_delete_job() -> None:
 
 	assert delete_job('job-test-delete-job') is True
 	assert delete_job('job-test-delete-job') is False
+=======
+	assert submit_jobs() is True
+
+
+def test_delete_job() -> None:
+	assert delete_job('job-test-delete-job-1') is False
+
+	create_job('job-test-delete-job-1')
+	create_job('job-test-delete-job-2')
+
+	assert delete_job('job-test-delete-job-1') is True
+	assert delete_job('job-test-delete-job-1') is False
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def test_delete_jobs() -> None:
@@ -93,11 +134,14 @@ def test_delete_jobs() -> None:
 	assert delete_jobs() is True
 
 
+<<<<<<< HEAD
 @pytest.mark.skip()
 def test_find_jobs() -> None:
 	pass
 
 
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 def test_find_job_ids() -> None:
 	create_job('job-test-find-job-ids-1')
 	create_job('job-test-find-job-ids-2')
@@ -164,7 +208,11 @@ def test_add_step() -> None:
 
 	assert steps[0].get('args') == args_1
 	assert steps[1].get('args') == args_2
+<<<<<<< HEAD
 	assert count_step_total('job-test-add-step') == 2
+=======
+	assert len(steps) == 2
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def test_remix_step() -> None:
@@ -196,7 +244,11 @@ def test_remix_step() -> None:
 	assert steps[2].get('args').get('source_path') == args_2.get('source_path')
 	assert steps[2].get('args').get('target_path') == args_1.get('output_path')
 	assert steps[2].get('args').get('output_path') == args_2.get('output_path')
+<<<<<<< HEAD
 	assert count_step_total('job-test-remix-step') == 3
+=======
+	assert len(steps) == 3
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def test_insert_step() -> None:
@@ -234,7 +286,11 @@ def test_insert_step() -> None:
 	assert steps[1].get('args') == args_2
 	assert steps[2].get('args') == args_1
 	assert steps[3].get('args') == args_3
+<<<<<<< HEAD
 	assert count_step_total('job-test-insert-step') == 4
+=======
+	assert len(steps) == 4
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def test_remove_step() -> None:
@@ -272,7 +328,11 @@ def test_remove_step() -> None:
 
 	assert steps[0].get('args') == args_1
 	assert steps[1].get('args') == args_1
+<<<<<<< HEAD
 	assert count_step_total('job-test-remove-step') == 2
+=======
+	assert len(steps) == 2
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def test_get_steps() -> None:
@@ -298,7 +358,11 @@ def test_get_steps() -> None:
 
 	assert steps[0].get('args') == args_1
 	assert steps[1].get('args') == args_2
+<<<<<<< HEAD
 	assert count_step_total('job-test-get-steps') == 2
+=======
+	assert len(steps) == 2
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def test_set_step_status() -> None:
@@ -328,7 +392,11 @@ def test_set_step_status() -> None:
 
 	assert steps[0].get('status') == 'completed'
 	assert steps[1].get('status') == 'failed'
+<<<<<<< HEAD
 	assert count_step_total('job-test-set-step-status') == 2
+=======
+	assert len(steps) == 2
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def test_set_steps_status() -> None:
@@ -357,4 +425,8 @@ def test_set_steps_status() -> None:
 
 	assert steps[0].get('status') == 'queued'
 	assert steps[1].get('status') == 'queued'
+<<<<<<< HEAD
 	assert count_step_total('job-test-set-steps-status') == 2
+=======
+	assert len(steps) == 2
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275

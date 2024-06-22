@@ -70,9 +70,12 @@ ProcessMode = Literal['output', 'preview', 'stream']
 ErrorCode = Literal[0, 1, 2, 3, 4]
 LogLevel = Literal['error', 'warn', 'info', 'debug']
 
+<<<<<<< HEAD
 TableHeaders = List[str]
 TableContents = List[List[int | float | str]]
 
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 VideoMemoryStrategy = Literal['strict', 'moderate', 'tolerant']
 FaceSelectorMode = Literal['many', 'one', 'reference']
 FaceAnalyserOrder = Literal['left-right', 'right-left', 'top-bottom', 'bottom-top', 'small-large', 'large-small', 'best-worst', 'worst-best']
@@ -133,6 +136,7 @@ ExecutionDevice = TypedDict('ExecutionDevice',
 	'utilization' : ExecutionDeviceUtilization
 })
 
+<<<<<<< HEAD
 JobStore = TypedDict('JobStore',
 {
 	'job_keys' : List[str],
@@ -141,6 +145,17 @@ JobStore = TypedDict('JobStore',
 JobOutputSet = Dict[str, List[str]]
 JobStatus = Literal['drafted', 'queued', 'completed', 'failed']
 JobStepStatus = Literal['drafted', 'queued', 'started', 'completed', 'failed']
+=======
+JobArgsStore = TypedDict('JobArgsStore',
+{
+	'job' : List[str],
+	'step' : List[str]
+})
+JobMergeSet = Dict[str, List[str]]
+JobStatus = Literal['drafted', 'queued', 'completed', 'failed']
+JobStepStatus = Literal['drafted', 'queued', 'started', 'completed', 'failed']
+
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 JobStep = TypedDict('JobStep',
 {
 	'args' : Args,
@@ -153,4 +168,7 @@ Job = TypedDict('Job',
 	'date_updated' : Optional[str],
 	'steps' : List[JobStep]
 })
+<<<<<<< HEAD
 JobSet = Dict[str, Job]
+=======
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275

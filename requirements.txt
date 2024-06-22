@@ -1,10 +1,18 @@
 filetype==1.2.0
+<<<<<<< HEAD
 gradio==4.36.1
+=======
+gradio==4.31.5
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 gradio_rangeslider==0.0.5
 numpy==1.26.4
 onnx==1.16.1
 onnxruntime==1.18.0
+<<<<<<< HEAD
 opencv-python==4.10.0.82
+=======
+opencv-python==4.9.0.80
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 psutil==5.9.8
 tqdm==4.66.4
 scipy==1.13.1

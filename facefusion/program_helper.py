@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from argparse import ArgumentParser, Action, _ArgumentGroup
 from copy import copy
 from typing import List, Optional
@@ -13,6 +14,13 @@ def find_argument_group(program : ArgumentParser, group_name : str) -> Optional[
 		if group.title == group_name:
 			return group
 	return None
+=======
+from argparse import ArgumentParser, Action
+from copy import copy
+from typing import List
+
+from facefusion.typing import Args
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
 
 
 def validate_args(program : ArgumentParser) -> bool:
@@ -42,6 +50,7 @@ def update_args(program : ArgumentParser, args : Args) -> ArgumentParser:
 
 	for action in program._actions:
 		if action.dest in args:
+<<<<<<< HEAD
 			if action.dest == 'face_detector_size':
 				action.choices = suggest_face_detector_choices(program)
 			if action.dest == 'face_swapper_pixel_boost':
@@ -71,3 +80,7 @@ def suggest_face_detector_choices(program : ArgumentParser) -> List[str]:
 def suggest_face_swapper_pixel_boost_choices(program : ArgumentParser) -> List[str]:
 	known_args, _ = program.parse_known_args()
 	return frame_processors_choices.face_swapper_set.get(known_args.face_swapper_model)  # type:ignore[call-overload]
+=======
+			action.default = args[action.dest]
+	return program
+>>>>>>> 04385b9a6e4bd5450d6f698e9b9ae040a6d66275
